@@ -102,16 +102,14 @@ class BankService:
         self.display_info_dataset(dataframe=dataframe)
 
         dataframe.loc[dataframe['default'] == 'unknown', 'default'] = 'no'
-        dataframe["y"] = dataframe['y'].apply(lambda x: 1 if x == 'yes' else 0)
+        
         dataframe["default"] = dataframe["default"].apply(lambda x: 1 if x == 'yes' else 0)
         dataframe["loan"] = dataframe["loan"].apply(lambda x: 1 if x == 'yes' else 0)
         dataframe["housing"] = dataframe["housing"].apply(lambda x: 1 if x == 'yes' else 0)
-
-        # Codificación de variables categóricas
-        dataframe = pd.get_dummies(dataframe, columns=['job', 'marital', 'education', 'contact', 'month', 'day_of_week', 'poutcome'])
-
-        # Normalización de características numéricas
+        dataframe = dataframe.drop(columns=['job', 'marital', 'education', 'contact'], axis=1)
+        dataframe = pd.get_dummies(dataframe, columns=['month', 'day_of_week', 'poutcome'])
         numeric_features = dataframe.select_dtypes(include=["int64", "float64"]).columns
+        dataframe["y"] = dataframe["y"].apply(lambda x: 1 if x == 'yes' else 0)
         scaler = StandardScaler()
         dataframe[numeric_features] = scaler.fit_transform(dataframe[numeric_features])
 
@@ -121,24 +119,14 @@ class BankService:
         X_train, X_test, y_train, y_test = train_test_split(X, y, random_state = 42, train_size = 0.80)
 
         model = LogisticRegression(class_weight='balanced')
+        print(y_train.unique())
+
         model.fit(X_train, y_train)
 
         y_pred = model.predict(X_test)
         print(classification_report(y_test, y_pred))
         print(f"ROC-AUC score: {roc_auc_score(y_test, model.predict_proba(X_test)[:, 1])}")
 
-
-        compatible_hyperparams = [
-            (C, penalty, solver, max_iter)
-            for C in self.hyperparams["C"]
-            for penalty in self.hyperparams["penalty"]
-            for solver in self.hyperparams["solver"]
-            for max_iter in self.hyperparams["max_iter"]
-            if (solver in ["liblinear"] and penalty in ["l1", "l2"]) or
-            (solver in ["sag", "saga", "lbfgs"] and penalty in ["l2", "none"]) or
-            (solver == "saga" and penalty in ["l1", "elasticnet", "l2"])
-        ]
-        
         grid = GridSearchCV(model, self.hyperparams, scoring = "accuracy", cv = 5)
         grid.fit(X_train, y_train)
         print(f"Best hyperparamters: {grid.best_params_}")
