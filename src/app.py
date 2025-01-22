@@ -1,8 +1,8 @@
-
-from bank_marketing.bank_service import BankService
+from medical_insurance.medical_insurance import MedicalInsurance
 
 def main():
-    BankService().process_data()
+    MedicalInsurance().process_data()
+    
 
 if __name__ == '__main__':
     main()
